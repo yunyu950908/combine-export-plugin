@@ -17,6 +17,7 @@ class CombineExportPlugin {
     this.PATH.BASE = basePath;
     this.PATH.TARGET = path.resolve(this.PATH.BASE, targetName);
     this.PATH.SOURCE = glob.sync(path.resolve(this.PATH.BASE, include), { ignore: [this.PATH.TARGET, exclude] });
+    this.checkPath();
   }
 
   apply(compiler) {
@@ -28,6 +29,29 @@ class CombineExportPlugin {
       // console.log(`@invalid\tUpdating ${this.targetName}`);
       this.updateTarget();
     });
+  }
+
+  checkPath() {
+    const checkHelper = filePath => fs.accessSync(
+      filePath,
+      fs.constants.F_OK | fs.constants.W_OK | fs.constants.R_OK,
+    );
+
+    try {
+      checkHelper(this.PATH.BASE);
+    } catch (e) {
+      throw new Error(`
+      basePath not exist,
+      or basePath is not visible to the calling process,
+      or process does not have read and write access to basePath.
+      `);
+    }
+
+    try {
+      checkHelper(this.PATH.TARGET);
+    } catch (e) {
+      this.writeFileFromString();
+    }
   }
 
   updateTarget() {
