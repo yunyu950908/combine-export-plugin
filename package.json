@@ -1,0 +1,12 @@
+{
+  "name": "combine-export-plugin",
+  "version": "0.0.1",
+  "description": "combine export plugin",
+  "main": "index.js",
+  "repository": "https://github.com/yunyu950908/combine-export-plugin",
+  "author": "yunyu950908 <yunyu950908@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "glob": "^7.1.3"
+  }
+}
