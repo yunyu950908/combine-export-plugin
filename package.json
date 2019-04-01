@@ -1,6 +1,6 @@
 {
   "name": "combine-export-plugin",
-  "version": "0.0.6",
+  "version": "0.0.8",
   "description": "combine export plugin",
   "main": "index.js",
   "repository": "https://github.com/yunyu950908/combine-export-plugin",

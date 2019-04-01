@@ -7,17 +7,21 @@ const PLUGIN_NAME = 'CombineExportPlugin';
 class CombineExportPlugin {
 
   constructor(options) {
-    this.PATH = {};
+    this.path = {
+      base: '',
+      target: '',
+      source: [],
+    };
     this.init(options);
   }
 
   init(options) {
     const { basePath = '', targetName = '', patterns = {} } = options;
-    const { include = '**/**.js', exclude = '' } = patterns;
-    this.PATH.BASE = basePath;
-    this.PATH.TARGET = path.resolve(this.PATH.BASE, targetName);
-    this.PATH.SOURCE = glob.sync(path.resolve(this.PATH.BASE, include), { ignore: [this.PATH.TARGET, exclude] });
-    this.checkPath();
+    const targetPath = path.resolve(basePath, targetName);
+    this.checkPath(basePath, targetPath);
+    this.path.base = basePath;
+    this.path.target = targetPath;
+    this.path.source = this.getSrcPaths(patterns);
   }
 
   apply(compiler) {
@@ -31,14 +35,30 @@ class CombineExportPlugin {
     });
   }
 
-  checkPath() {
+  getSrcPaths(patterns) {
+    const result = [];
+    const { includes = ['**/**.js'], excludes = [] } = patterns;
+    const getPattern = p => path.resolve(this.path.base, p);
+    const ignore = [this.path.target, ...excludes];
+    includes.forEach(p => {
+      const ps = glob.sync(getPattern(p), { ignore });
+      result.push(...ps);
+    });
+    return result;
+  }
+
+  checkPath(basePath, targetPath) {
     const checkHelper = filePath => fs.accessSync(
       filePath,
       fs.constants.F_OK | fs.constants.W_OK | fs.constants.R_OK,
     );
 
+    if (!path.isAbsolute(basePath)) {
+      throw new Error('`basePath` need to be an absolute path.')
+    }
+
     try {
-      checkHelper(this.PATH.BASE);
+      checkHelper(basePath);
     } catch (e) {
       throw new Error(`
       basePath not exist,
@@ -48,7 +68,7 @@ class CombineExportPlugin {
     }
 
     try {
-      checkHelper(this.PATH.TARGET);
+      checkHelper(targetPath);
     } catch (e) {
       this.writeFileFromString();
     }
@@ -63,21 +83,19 @@ class CombineExportPlugin {
   }
 
   readFileToString() {
-    const buf = fs.readFileSync(this.PATH.TARGET);
+    const buf = fs.readFileSync(this.path.target);
     const content = buf.toString();
     return content;
   }
 
   writeFileFromString(data = '') {
-    fs.writeFileSync(this.PATH.TARGET, data);
+    fs.writeFileSync(this.path.target, data);
   }
 
   generateOutput() {
     let output = '';
-    this.PATH.SOURCE.forEach(filePath => {
-      // dce-monitor/frontend/monitor/src/models/api/xxx.js => xxx.js
-      // dce-monitor/frontend/monitor/src/models/api/a/b/c.js => a/b/c.js
-      filePath = filePath.replace(new RegExp(this.PATH.BASE + '/?'), '');
+    this.path.source.forEach(filePath => {
+      filePath = filePath.replace(new RegExp(this.path.base + '/?'), '');
       output += `export * from './${filePath}';\n`;
     });
     return output;
